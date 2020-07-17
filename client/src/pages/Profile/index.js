@@ -1,249 +1,142 @@
-import React, { Component } from "react";
-import "./index.module.css";
+import React, { Component, useState, useEffect } from "react";
 import classes from "./index.module.css";
-import Button from "@material-ui/core/Button"
-import TextField from "@material-ui/core/TextField"
-import EventAvailableIcon from "@material-ui/icons/EventAvailable";
+import Loader from "../../components/Loader";
+import AccessTimeIcon from "@material-ui/icons/AccessTime";
+import TodayIcon from "@material-ui/icons/Today";
+import Tooltip from "@material-ui/core/Tooltip";
+import MailOutlineIcon from "@material-ui/icons/MailOutline";
+import Register from "../../components/Register";
+import axiosInstance from "../../axios";
+import { useAuth0 } from "@auth0/auth0-react";
 
-class Badges extends Component {
-  render() {
-    return (
-      <div className={classes.card} id={classes.badge}>
-        <p className={classes.cardtitle}>Badge</p>
-        <div>
-          <img
-            alt="Name Of Accomplishment"
-            src="https://img.icons8.com/plasticine/100/000000/warranty.png"
-          />
-        </div>
+const Skills = (props) => {
+  return (
+    <div className={classes.card} id={classes.skills}>
+      <p className={classes.cardtitle}>Skills </p>
+      <div className={classes.skill}>
+        {props.skills.map((skill, index) => (
+          <p key={index} className={classes.skillname}>
+            {skill}
+          </p>
+        ))}
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
 
-class Skills extends Component {
-  render() {
-    return (
-      <div className={classes.card} id={classes.skills}>
-        <p className={classes.cardtitle}>Skills </p>
-        <div className={classes.skill}>
-          <p className={classes.skillname}>Python</p>
-          <h6>Endorsed by ABC and 5 others</h6>
-        </div>
-      </div>
-    );
-  }
-}
+const Profile = (props) => {
+  const [userProfile, setUserProfile] = useState(null);
+  const [userSkills, setUserSkills] = useState({});
+  const [dialogOpen, showDialog] = useState(false);
+  const { getIdTokenClaims } = useAuth0();
 
-class ProfileContent extends Component {
-  render() {
-    return (
-      <div>
-        <section className={classes.cards}>
-          <div className={classes.card}>
-            <p className={classes.cardtitle}>About Me</p>
-            <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus
-              elit nulla, convallis rhoncus neque sit amet, porta porttitor
-              magna. Aenean suscipit urna vel ante posuere, nec pulvinar tellus
-              facilisis. Nullam ultrices imperdiet arcu, eget iaculis enim
-              faucibus eget. Sed nibh nibh, elementum sed finibus et, lacinia
-              quis metus. Etiam eget hendrerit tellus. Ut accumsan tincidunt
-              felis quis hendrerit. Curabitur auctor venenatis ante ac
-              venenatis.
-            </p>
-          </div>
-        </section>
-        <section className={classes.cards}>
-          <Badges />
-          <Skills />
-        </section>
-      </div>
-    );
-  }
-}
+  const handleOpen = () => {
+    showDialog(true);
+  };
 
-class UpcomingMeet extends Component {
-  render() {
-    return (
-      <div className={classes.card}>
-        <p className={classes.cardtitle}>Upcoming Meeting</p>
-        <div className={classes.meetings} >
-        <Button color="primary" className={classes.open} classes={{ root: classes.meetbutton }} onClick={this.props.action}>Reshedule</Button> 
-          <p className={classes.meetinginfo}>Meeting with XYZ on JavaScript</p>                   
-          <p className={classes.meetingdetail}>Date: 2020/07/03</p>
-          <Button color="primary" className={classes.cancelmeet} classes={{ root: classes.meetbutton }}>Cancel</Button>
-          <p className={classes.meetingdetail} >Time: 5:30 AM</p>
-        </div>
-      </div>
-    );
-  }
-}
+  const handleClose = () => {
+    showDialog(false);
+  };
 
-class RecentMeet extends Component {
-  render() {
-    return (
-      <div className={classes.card}>
-        <p className={classes.cardtitle}>Recent Meetings</p>
-        <div className={classes.meetings}>
-          <Button>Endorse</Button>
-          <p className={classes.meetinginfo}>Meeting with XYZ on JavaScript</p>
-        </div>
-      </div>
-    );
-  }
-}
+  useEffect(() => {
+    async function returnData() {
+      const token = (await getIdTokenClaims())?.__raw;
 
-class Popup extends Component {
-  render() {
-    return (
-      <div className={classes.popupoverlay}>
-        <div className={classes.popupcontent}>
-          <EventAvailableIcon style={{ fontSize: 80, margin: 20}}/>
-          <form>
+      if (props.match.params.id) {
+        return (
+          await axiosInstance.get(`/user/${props.match.params.id}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Access-Control-Allow-Origin": "*",
+            },
+          })
+        ).data;
+      } else {
+        return (
+          await axiosInstance.get(`/user/whoami`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Access-Control-Allow-Origin": "*",
+            },
+          })
+        ).data.responseData;
+      }
+    }
 
-            <div class={classes.datatime}>
-                <TextField
-                id="date"
-                label="Date"
-                type="date"
-                defaultValue="2020-07-1"
-                style = {{width:300}}
-                className={classes.textField}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </div>
-            <div class={classes.datatime}>
-                <TextField
-                  id="time"
-                  label="Time"
-                  type="time"
-                  defaultValue="07:30"
-                  style = {{width:300}}
-                  className={classes.textField}
-                  InputLabelProps={{
-                    shrink: true,
-                }}/>
+    async function fetchUserSkills(id) {
+      const token = (await getIdTokenClaims())?.__raw;
+      return await axiosInstance.get(`/expertise/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
+
+    returnData().then(async (res) => {
+      console.log(res);
+      const skills = (await fetchUserSkills(res._id)).data.msg.map((exp) => {
+        return exp.topic;
+      });
+      if (!res) handleOpen();
+      setUserProfile(res);
+      setUserSkills(skills);
+    });
+  }, []);
+
+  return (
+    <div>
+      {userProfile ? (
+        <>
+          <div>
+            <div className={classes.intro}>
+              <div className={classes.profileimage}>
+                <img
+                  className={classes.bannerphoto}
+                  src={userProfile.picture}
+                  alt={userProfile.name}
+                ></img>
               </div>
-              <br/>
-            <Button className={classes.close} onClick={this.props.action}>Close</Button>  
-            <Button>Send Request</Button>                    
-          </form>
-        </div>
-      </div>
-    );
-  }
-}
-
-class MeetingContent extends Component {
-  constructor(props) {
-    super(props);
-    this.ResheduleInActive = this.ResheduleInActive.bind(this);
-    this.ResheduleActive = this.ResheduleActive.bind(this);
-    this.state = { showRegister: false };
-  }
-  ResheduleInActive() {
-    this.setState({ showRegister: false });
-  }
-  ResheduleActive() {
-    this.setState({ showRegister: true });
-  }
-  render() {
-    return (
-      <div id={classes.meeting}>
-        <section className={classes.cards}>
-          <UpcomingMeet action={this.ResheduleActive} />
-          <RecentMeet />
-        </section>
-        {this.state.showRegister && <Popup action={this.ResheduleInActive} />}
-      </div>
-    );
-  }
-}
-
-class ProfileHeader extends Component {
-  render() {
-    return (
-      <div>
-        <div className={classes.intro}>
-          <div className={classes.profileimage}>
-            <img
-              className={classes.bannerphoto}
-              src="https://dummyimage.com/500/09f/fff.png"
-              alt="Mock Name"
-            ></img>
+              <p className={classes.bannername}>{userProfile.name}</p>
+            </div>
+            <div className={classes.links}>
+              <Tooltip title={userProfile.timeZone}>
+                <AccessTimeIcon />
+              </Tooltip>
+              {userProfile.socialLink && (
+                <a
+                  href={userProfile.socialLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Tooltip title="Contact Link">
+                    <TodayIcon />
+                  </Tooltip>
+                </a>
+              )}
+              <Tooltip title={userProfile.email}>
+                <MailOutlineIcon />
+              </Tooltip>
+            </div>
           </div>
-          <p className={classes.bannername}>Mock Name</p>
+          <div>
+            <section className={classes.cards}>
+              {userSkills.length > 0 ? (
+                <Skills skills={userSkills} />
+              ) : (
+                <p>No Skills</p>
+              )}
+            </section>
+          </div>
+        </>
+      ) : (
+        <div className={classes.loadercontainer}>
+          <Loader />
         </div>
-      </div>
-    );
-  }
-}
-
-class NavItem extends Component {
-  render() {
-    return (
-      <li>
-        <span
-          className={classes.item}
-          id={this.props.activeProfile && classes.active}
-          onClick={this.props.action}
-        >
-          {this.props.children}
-        </span>
-      </li>
-    );
-  }
-}
-
-class Profile extends Component {
-  constructor(props) {
-    super(props);
-    this.clickProfile = this.clickProfile.bind(this);
-    this.clickMeeting = this.clickMeeting.bind(this);
-    this.state = { activeProfile: true, isProfile: true, isMeeting: false };
-  }
-  clickProfile(props) {
-    this.setState({
-      activeProfile: true,
-      isProfile: true,
-      isMeeting: false,
-    });
-  }
-  clickMeeting(props) {
-    this.setState({
-      activeProfile: false,
-      isProfile: false,
-      isMeeting: true,
-    });
-  }
-  render() {
-    return (
-      <div>
-        <ProfileHeader />
-        <nav className={classes.profilenav}>
-          <ul className={classes.nav}>
-            <NavItem
-              action={this.clickProfile}
-              activeProfile={this.state.activeProfile}
-            >
-              Profile
-            </NavItem>
-            <NavItem
-              action={this.clickMeeting}
-              activeProfile={!this.state.activeProfile}
-            >
-              Meeting
-            </NavItem>
-          </ul>
-        </nav>
-        {this.state.isMeeting && <MeetingContent />}
-        {this.state.isProfile && <ProfileContent />}
-      </div>
-    );
-  }
-}
+      )}
+      <Register open={dialogOpen} onClose={handleClose}></Register>
+    </div>
+  );
+};
 
 export default Profile;
